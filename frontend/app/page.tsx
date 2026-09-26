@@ -13,6 +13,7 @@ export default function Home() {
   const [topic, setTopic] = useState("");
   const [loading, setLoading] = useState(false);
   const [report, setReport] = useState("");
+  const [feedback, setFeedback] = useState("");
   const [error, setError] = useState("");
   const [userName, setUserName] = useState<string | null>(null);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
@@ -63,7 +64,10 @@ export default function Home() {
     };
   }, [supabase]);
 
-  // Automatically move to the generated report
+  /*
+   * Automatically scroll to the generated report
+   * after the complete research pipeline finishes.
+   */
   useEffect(() => {
     if (report && !loading) {
       setTimeout(() => {
@@ -123,6 +127,7 @@ export default function Home() {
     setLoading(true);
     setError("");
     setReport("");
+    setFeedback("");
 
     setStatuses({
       search: "waiting",
@@ -184,9 +189,10 @@ export default function Home() {
 
             if (data.type === "result") {
               const finalReport = data.data.report || "";
-              const feedback = data.data.feedback || "";
+              const finalFeedback = data.data.feedback || "";
 
               setReport(finalReport);
+              setFeedback(finalFeedback);
 
               const {
                 data: { user },
@@ -204,7 +210,7 @@ export default function Home() {
                   user_id: user.id,
                   topic: topic.trim(),
                   report: finalReport,
-                  feedback: feedback,
+                  feedback: finalFeedback,
                 });
 
               if (saveError) {
@@ -215,7 +221,9 @@ export default function Home() {
             }
 
             if (data.type === "error") {
-              throw new Error(data.message || "Research failed.");
+              throw new Error(
+                data.message || "Research failed."
+              );
             }
           } catch (eventError) {
             if (
@@ -426,11 +434,11 @@ export default function Home() {
         </section>
       )}
 
-      {/* Report */}
+      {/* Research Report */}
       {report && (
         <section
           ref={reportRef}
-          className="mx-auto max-w-4xl scroll-mt-6 px-6 pb-20"
+          className="mx-auto max-w-4xl scroll-mt-6 px-6 pb-10"
         >
           <div className="rounded-2xl border border-zinc-800 bg-zinc-950 p-7">
             <div className="mb-8 border-b border-zinc-800 pb-6">
@@ -527,6 +535,87 @@ export default function Home() {
                 }}
               >
                 {report}
+              </ReactMarkdown>
+            </article>
+          </div>
+        </section>
+      )}
+
+      {/* Critic Review */}
+      {feedback && (
+        <section className="mx-auto max-w-4xl px-6 pb-20">
+          <div className="rounded-2xl border border-zinc-800 bg-zinc-950 p-7">
+            <div className="mb-8 border-b border-zinc-800 pb-6">
+              <p className="text-xs uppercase tracking-[0.18em] text-zinc-500">
+                Critic Review
+              </p>
+
+              <h2 className="mt-3 text-2xl font-semibold text-white">
+                Review of the Research
+              </h2>
+            </div>
+
+            <article className="max-w-none">
+              <ReactMarkdown
+                components={{
+                  h1: ({ children }) => (
+                    <h1 className="mb-6 mt-2 text-3xl font-bold text-white">
+                      {children}
+                    </h1>
+                  ),
+
+                  h2: ({ children }) => (
+                    <h2 className="mb-4 mt-8 text-2xl font-semibold text-white">
+                      {children}
+                    </h2>
+                  ),
+
+                  h3: ({ children }) => (
+                    <h3 className="mb-3 mt-7 text-xl font-semibold text-zinc-100">
+                      {children}
+                    </h3>
+                  ),
+
+                  p: ({ children }) => (
+                    <p className="mb-5 text-[15px] leading-8 text-zinc-300">
+                      {children}
+                    </p>
+                  ),
+
+                  strong: ({ children }) => (
+                    <strong className="font-semibold text-white">
+                      {children}
+                    </strong>
+                  ),
+
+                  ul: ({ children }) => (
+                    <ul className="mb-6 ml-6 list-disc space-y-2 text-[15px] leading-7 text-zinc-300">
+                      {children}
+                    </ul>
+                  ),
+
+                  ol: ({ children }) => (
+                    <ol className="mb-6 ml-6 list-decimal space-y-2 text-[15px] leading-7 text-zinc-300">
+                      {children}
+                    </ol>
+                  ),
+
+                  li: ({ children }) => (
+                    <li className="pl-1">{children}</li>
+                  ),
+
+                  blockquote: ({ children }) => (
+                    <blockquote className="my-6 border-l-2 border-zinc-600 pl-5 text-zinc-400">
+                      {children}
+                    </blockquote>
+                  ),
+
+                  hr: () => (
+                    <hr className="my-8 border-zinc-800" />
+                  ),
+                }}
+              >
+                {feedback}
               </ReactMarkdown>
             </article>
           </div>
