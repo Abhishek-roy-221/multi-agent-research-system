@@ -1,5 +1,6 @@
 from langchain.agents import create_agent
 from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_mistralai import ChatMistralAI
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 from tools import web_search , scrape_url
@@ -19,7 +20,7 @@ def build_search_agent():
     )
 
 # 2nd agent - reader
-def build_search_agent():
+def build_reader_agent():
     return create_agent(
         model = llm,
         tools=[scrape_url]
