@@ -64,10 +64,6 @@ export default function Home() {
     };
   }, [supabase]);
 
-  /*
-   * Automatically scroll to the generated report
-   * after the complete research pipeline finishes.
-   */
   useEffect(() => {
     if (report && !loading) {
       setTimeout(() => {
@@ -295,18 +291,18 @@ export default function Home() {
   ];
 
   return (
-    <main className="min-h-screen bg-[#09090b] text-white">
+    <main className="min-h-screen overflow-x-hidden bg-[#09090b] text-white">
       {/* Navbar */}
       <nav className="border-b border-zinc-800/80">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-5">
+        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 px-4 py-4 sm:px-6 sm:py-5">
           <Link
             href="/"
-            className="text-xl font-semibold tracking-tight"
+            className="text-lg font-semibold tracking-tight sm:text-xl"
           >
             ResearchMind
           </Link>
 
-          <div className="flex items-center gap-7">
+          <div className="flex flex-wrap items-center justify-end gap-3 sm:gap-7">
             {userName ? (
               <>
                 <Link
@@ -316,13 +312,13 @@ export default function Home() {
                   History
                 </Link>
 
-                <span className="text-sm text-zinc-300">
+                <span className="max-w-[120px] truncate text-sm text-zinc-300 sm:max-w-none">
                   {userName}
                 </span>
 
                 <button
                   onClick={() => setShowLogoutModal(true)}
-                  className="rounded-xl border border-zinc-700 bg-zinc-900 px-4 py-2 text-sm font-medium transition hover:border-zinc-500 hover:bg-zinc-800"
+                  className="rounded-xl border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm font-medium transition hover:border-zinc-500 hover:bg-zinc-800 sm:px-4"
                 >
                   Logout
                 </button>
@@ -330,7 +326,7 @@ export default function Home() {
             ) : (
               <button
                 onClick={signInWithGoogle}
-                className="rounded-xl bg-white px-4 py-2 text-sm font-medium text-black transition hover:bg-zinc-200"
+                className="rounded-xl bg-white px-3 py-2 text-sm font-medium text-black transition hover:bg-zinc-200 sm:px-4"
               >
                 Continue with Google
               </button>
@@ -340,12 +336,12 @@ export default function Home() {
       </nav>
 
       {/* Hero */}
-      <section className="mx-auto max-w-5xl px-6 pb-12 pt-20 text-center">
-        <div className="mb-5 inline-flex rounded-full border border-zinc-800 bg-zinc-900/70 px-4 py-2 text-sm text-zinc-400">
+      <section className="mx-auto max-w-5xl px-5 pb-10 pt-14 text-center sm:px-6 sm:pb-12 sm:pt-20">
+        <div className="mb-5 inline-flex rounded-full border border-zinc-800 bg-zinc-900/70 px-3 py-2 text-xs text-zinc-400 sm:px-4 sm:text-sm">
           AI-powered research assistant
         </div>
 
-        <h1 className="text-5xl font-bold tracking-tight sm:text-6xl">
+        <h1 className="text-4xl font-bold leading-tight tracking-tight sm:text-5xl md:text-6xl">
           Research deeper.
           <br />
           <span className="text-zinc-400">
@@ -353,25 +349,25 @@ export default function Home() {
           </span>
         </h1>
 
-        <p className="mx-auto mt-6 max-w-2xl text-base leading-7 text-zinc-400">
+        <p className="mx-auto mt-5 max-w-2xl text-sm leading-6 text-zinc-400 sm:mt-6 sm:text-base sm:leading-7">
           ResearchMind searches the web, reads relevant sources,
           writes a structured report, and reviews the result for you.
         </p>
       </section>
 
       {/* Research Input */}
-      <section className="mx-auto max-w-4xl px-6">
-        <div className="rounded-2xl border border-zinc-800 bg-zinc-950 p-5 shadow-2xl shadow-black/20">
+      <section className="mx-auto max-w-4xl px-4 sm:px-6">
+        <div className="rounded-2xl border border-zinc-800 bg-zinc-950 p-4 shadow-2xl shadow-black/20 sm:p-5">
           <textarea
             value={topic}
             onChange={(e) => setTopic(e.target.value)}
             placeholder="What do you want to research?"
             rows={5}
             disabled={loading}
-            className="w-full resize-none bg-transparent text-base text-white outline-none placeholder:text-zinc-600"
+            className="w-full resize-none bg-transparent text-sm leading-6 text-white outline-none placeholder:text-zinc-600 sm:text-base sm:leading-7"
           />
 
-          <div className="mt-4 flex items-center justify-between border-t border-zinc-800 pt-4">
+          <div className="mt-4 flex flex-col gap-4 border-t border-zinc-800 pt-4 sm:flex-row sm:items-center sm:justify-between sm:gap-0">
             <p className="text-xs text-zinc-600">
               ResearchMind will use multiple AI agents.
             </p>
@@ -379,7 +375,7 @@ export default function Home() {
             <button
               onClick={runResearch}
               disabled={loading}
-              className="rounded-xl bg-white px-5 py-2.5 text-sm font-semibold text-black transition hover:bg-zinc-200 disabled:cursor-not-allowed disabled:opacity-50"
+              className="w-full rounded-xl bg-white px-5 py-2.5 text-sm font-semibold text-black transition hover:bg-zinc-200 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
             >
               {loading ? "Researching..." : "Run Research"}
             </button>
@@ -388,15 +384,15 @@ export default function Home() {
       </section>
 
       {/* Agent Status */}
-      <section className="mx-auto max-w-4xl px-6 py-10">
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <section className="mx-auto max-w-4xl px-4 py-8 sm:px-6 sm:py-10">
+        <div className="grid gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-4">
           {agents.map((agent) => {
             const status = statuses[agent.key];
 
             return (
               <div
                 key={agent.key}
-                className="rounded-2xl border border-zinc-800 bg-zinc-950 p-5"
+                className="rounded-2xl border border-zinc-800 bg-zinc-950 p-4 sm:p-5"
               >
                 <div className="flex items-start justify-between">
                   <span className="text-xl">{agent.icon}</span>
@@ -427,8 +423,8 @@ export default function Home() {
 
       {/* Error */}
       {error && (
-        <section className="mx-auto max-w-4xl px-6 pb-8">
-          <div className="rounded-xl border border-red-900/50 bg-red-950/20 px-5 py-4 text-sm text-red-300">
+        <section className="mx-auto max-w-4xl px-4 pb-8 sm:px-6">
+          <div className="rounded-xl border border-red-900/50 bg-red-950/20 px-4 py-4 text-sm text-red-300 sm:px-5">
             {error}
           </div>
         </section>
@@ -438,42 +434,42 @@ export default function Home() {
       {report && (
         <section
           ref={reportRef}
-          className="mx-auto max-w-4xl scroll-mt-6 px-6 pb-10"
+          className="mx-auto max-w-4xl scroll-mt-4 px-4 pb-8 sm:scroll-mt-6 sm:px-6 sm:pb-10"
         >
-          <div className="rounded-2xl border border-zinc-800 bg-zinc-950 p-7">
-            <div className="mb-8 border-b border-zinc-800 pb-6">
-              <p className="text-xs uppercase tracking-[0.18em] text-zinc-500">
+          <div className="rounded-2xl border border-zinc-800 bg-zinc-950 p-5 sm:p-7">
+            <div className="mb-7 border-b border-zinc-800 pb-5 sm:mb-8 sm:pb-6">
+              <p className="text-[11px] uppercase tracking-[0.18em] text-zinc-500 sm:text-xs">
                 Research Report
               </p>
 
-              <h2 className="mt-3 text-2xl font-semibold leading-tight text-white">
+              <h2 className="mt-3 break-words text-xl font-semibold leading-tight text-white sm:text-2xl">
                 {topic}
               </h2>
             </div>
 
-            <article className="max-w-none">
+            <article className="max-w-none overflow-hidden">
               <ReactMarkdown
                 components={{
                   h1: ({ children }) => (
-                    <h1 className="mb-6 mt-2 text-3xl font-bold leading-tight text-white">
+                    <h1 className="mb-5 mt-2 break-words text-2xl font-bold leading-tight text-white sm:mb-6 sm:text-3xl">
                       {children}
                     </h1>
                   ),
 
                   h2: ({ children }) => (
-                    <h2 className="mb-4 mt-10 text-2xl font-semibold leading-tight text-white">
+                    <h2 className="mb-3 mt-8 break-words text-xl font-semibold leading-tight text-white sm:mb-4 sm:mt-10 sm:text-2xl">
                       {children}
                     </h2>
                   ),
 
                   h3: ({ children }) => (
-                    <h3 className="mb-3 mt-8 text-xl font-semibold leading-tight text-zinc-100">
+                    <h3 className="mb-3 mt-7 break-words text-lg font-semibold leading-tight text-zinc-100 sm:mt-8 sm:text-xl">
                       {children}
                     </h3>
                   ),
 
                   p: ({ children }) => (
-                    <p className="mb-5 text-[15px] leading-8 text-zinc-300">
+                    <p className="mb-5 break-words text-sm leading-7 text-zinc-300 sm:text-[15px] sm:leading-8">
                       {children}
                     </p>
                   ),
@@ -491,35 +487,37 @@ export default function Home() {
                   ),
 
                   ul: ({ children }) => (
-                    <ul className="mb-6 ml-6 list-disc space-y-2 text-[15px] leading-7 text-zinc-300">
+                    <ul className="mb-6 ml-5 list-disc space-y-2 text-sm leading-7 text-zinc-300 sm:ml-6 sm:text-[15px]">
                       {children}
                     </ul>
                   ),
 
                   ol: ({ children }) => (
-                    <ol className="mb-6 ml-6 list-decimal space-y-2 text-[15px] leading-7 text-zinc-300">
+                    <ol className="mb-6 ml-5 list-decimal space-y-2 text-sm leading-7 text-zinc-300 sm:ml-6 sm:text-[15px]">
                       {children}
                     </ol>
                   ),
 
                   li: ({ children }) => (
-                    <li className="pl-1">{children}</li>
+                    <li className="pl-1 break-words">
+                      {children}
+                    </li>
                   ),
 
                   blockquote: ({ children }) => (
-                    <blockquote className="my-6 border-l-2 border-zinc-600 pl-5 text-zinc-400">
+                    <blockquote className="my-6 border-l-2 border-zinc-600 pl-4 text-zinc-400 sm:pl-5">
                       {children}
                     </blockquote>
                   ),
 
                   code: ({ children }) => (
-                    <code className="rounded-md bg-zinc-900 px-1.5 py-0.5 text-sm text-zinc-200">
+                    <code className="break-all rounded-md bg-zinc-900 px-1.5 py-0.5 text-xs text-zinc-200 sm:text-sm">
                       {children}
                     </code>
                   ),
 
                   hr: () => (
-                    <hr className="my-8 border-zinc-800" />
+                    <hr className="my-7 border-zinc-800 sm:my-8" />
                   ),
 
                   a: ({ href, children }) => (
@@ -527,7 +525,7 @@ export default function Home() {
                       href={href}
                       target="_blank"
                       rel="noreferrer"
-                      className="text-zinc-100 underline underline-offset-4 hover:text-white"
+                      className="break-words text-zinc-100 underline underline-offset-4 hover:text-white"
                     >
                       {children}
                     </a>
@@ -543,41 +541,41 @@ export default function Home() {
 
       {/* Critic Review */}
       {feedback && (
-        <section className="mx-auto max-w-4xl px-6 pb-20">
-          <div className="rounded-2xl border border-zinc-800 bg-zinc-950 p-7">
-            <div className="mb-8 border-b border-zinc-800 pb-6">
-              <p className="text-xs uppercase tracking-[0.18em] text-zinc-500">
+        <section className="mx-auto max-w-4xl px-4 pb-12 sm:px-6 sm:pb-20">
+          <div className="rounded-2xl border border-zinc-800 bg-zinc-950 p-5 sm:p-7">
+            <div className="mb-7 border-b border-zinc-800 pb-5 sm:mb-8 sm:pb-6">
+              <p className="text-[11px] uppercase tracking-[0.18em] text-zinc-500 sm:text-xs">
                 Critic Review
               </p>
 
-              <h2 className="mt-3 text-2xl font-semibold text-white">
+              <h2 className="mt-3 text-xl font-semibold text-white sm:text-2xl">
                 Review of the Research
               </h2>
             </div>
 
-            <article className="max-w-none">
+            <article className="max-w-none overflow-hidden">
               <ReactMarkdown
                 components={{
                   h1: ({ children }) => (
-                    <h1 className="mb-6 mt-2 text-3xl font-bold text-white">
+                    <h1 className="mb-5 mt-2 break-words text-2xl font-bold text-white sm:mb-6 sm:text-3xl">
                       {children}
                     </h1>
                   ),
 
                   h2: ({ children }) => (
-                    <h2 className="mb-4 mt-8 text-2xl font-semibold text-white">
+                    <h2 className="mb-3 mt-7 break-words text-xl font-semibold text-white sm:mb-4 sm:mt-8 sm:text-2xl">
                       {children}
                     </h2>
                   ),
 
                   h3: ({ children }) => (
-                    <h3 className="mb-3 mt-7 text-xl font-semibold text-zinc-100">
+                    <h3 className="mb-3 mt-6 break-words text-lg font-semibold text-zinc-100 sm:mt-7 sm:text-xl">
                       {children}
                     </h3>
                   ),
 
                   p: ({ children }) => (
-                    <p className="mb-5 text-[15px] leading-8 text-zinc-300">
+                    <p className="mb-5 break-words text-sm leading-7 text-zinc-300 sm:text-[15px] sm:leading-8">
                       {children}
                     </p>
                   ),
@@ -589,29 +587,31 @@ export default function Home() {
                   ),
 
                   ul: ({ children }) => (
-                    <ul className="mb-6 ml-6 list-disc space-y-2 text-[15px] leading-7 text-zinc-300">
+                    <ul className="mb-6 ml-5 list-disc space-y-2 text-sm leading-7 text-zinc-300 sm:ml-6 sm:text-[15px]">
                       {children}
                     </ul>
                   ),
 
                   ol: ({ children }) => (
-                    <ol className="mb-6 ml-6 list-decimal space-y-2 text-[15px] leading-7 text-zinc-300">
+                    <ol className="mb-6 ml-5 list-decimal space-y-2 text-sm leading-7 text-zinc-300 sm:ml-6 sm:text-[15px]">
                       {children}
                     </ol>
                   ),
 
                   li: ({ children }) => (
-                    <li className="pl-1">{children}</li>
+                    <li className="break-words pl-1">
+                      {children}
+                    </li>
                   ),
 
                   blockquote: ({ children }) => (
-                    <blockquote className="my-6 border-l-2 border-zinc-600 pl-5 text-zinc-400">
+                    <blockquote className="my-6 border-l-2 border-zinc-600 pl-4 text-zinc-400 sm:pl-5">
                       {children}
                     </blockquote>
                   ),
 
                   hr: () => (
-                    <hr className="my-8 border-zinc-800" />
+                    <hr className="my-7 border-zinc-800 sm:my-8" />
                   ),
                 }}
               >
@@ -624,11 +624,11 @@ export default function Home() {
 
       {/* Logout Confirmation Modal */}
       {showLogoutModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-6 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-2xl border border-zinc-800 bg-[#111113] p-6 shadow-2xl">
-            <div className="flex items-start justify-between">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4 backdrop-blur-sm sm:px-6">
+          <div className="w-full max-w-md rounded-2xl border border-zinc-800 bg-[#111113] p-5 shadow-2xl sm:p-6">
+            <div className="flex items-start justify-between gap-4">
               <div>
-                <h2 className="text-xl font-semibold text-white">
+                <h2 className="text-lg font-semibold text-white sm:text-xl">
                   Log out?
                 </h2>
 
@@ -639,24 +639,24 @@ export default function Home() {
 
               <button
                 onClick={() => setShowLogoutModal(false)}
-                className="rounded-lg p-1.5 text-zinc-500 transition hover:bg-zinc-800 hover:text-white"
+                className="shrink-0 rounded-lg p-1.5 text-zinc-500 transition hover:bg-zinc-800 hover:text-white"
                 aria-label="Close"
               >
                 ✕
               </button>
             </div>
 
-            <div className="mt-7 flex justify-end gap-3">
+            <div className="mt-7 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
               <button
                 onClick={() => setShowLogoutModal(false)}
-                className="rounded-xl border border-zinc-700 px-4 py-2.5 text-sm font-medium text-zinc-300 transition hover:bg-zinc-800 hover:text-white"
+                className="w-full rounded-xl border border-zinc-700 px-4 py-2.5 text-sm font-medium text-zinc-300 transition hover:bg-zinc-800 hover:text-white sm:w-auto"
               >
                 Cancel
               </button>
 
               <button
                 onClick={signOut}
-                className="rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-black transition hover:bg-zinc-200"
+                className="w-full rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-black transition hover:bg-zinc-200 sm:w-auto"
               >
                 Logout
               </button>
