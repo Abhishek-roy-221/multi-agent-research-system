@@ -7,40 +7,6 @@ import { createClient } from "@/lib/supabase/client";
 
 type AgentStatus = "waiting" | "running" | "completed";
 
-type Agent = {
-  key: string;
-  number: string;
-  title: string;
-  description: string;
-};
-
-const agents: Agent[] = [
-  {
-    key: "search",
-    number: "01",
-    title: "Search Agent",
-    description: "Finds recent and reliable information from the web.",
-  },
-  {
-    key: "reader",
-    number: "02",
-    title: "Reader Agent",
-    description: "Reads and extracts useful information from sources.",
-  },
-  {
-    key: "writer",
-    number: "03",
-    title: "Writer Agent",
-    description: "Turns the collected research into a structured report.",
-  },
-  {
-    key: "critic",
-    number: "04",
-    title: "Critic Agent",
-    description: "Reviews the report and identifies weaknesses.",
-  },
-];
-
 export default function Home() {
   const supabase = createClient();
 
@@ -50,7 +16,14 @@ export default function Home() {
   const [error, setError] = useState("");
   const [userName, setUserName] = useState<string | null>(null);
 
-  const [statuses, setStatuses] = useState<Record<string, AgentStatus>>({
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
+
+  const [statuses, setStatuses] = useState<{
+    search: AgentStatus;
+    reader: AgentStatus;
+    writer: AgentStatus;
+    critic: AgentStatus;
+  }>({
     search: "waiting",
     reader: "waiting",
     writer: "waiting",
@@ -105,6 +78,8 @@ export default function Home() {
   };
 
   const signOut = async () => {
+    setError("");
+
     const { error } = await supabase.auth.signOut();
 
     if (error) {
@@ -113,20 +88,24 @@ export default function Home() {
     }
 
     setUserName(null);
+    setShowLogoutModal(false);
   };
 
-  const updateAgentStatus = (
-    stage: string,
+  const updateStatus = (
+    stage: "search" | "reader" | "writer" | "critic",
     status: AgentStatus
   ) => {
-    setStatuses((current) => ({
-      ...current,
+    setStatuses((prev) => ({
+      ...prev,
       [stage]: status,
     }));
   };
 
   const runResearch = async () => {
-    if (!topic.trim() || loading) return;
+    if (!topic.trim()) {
+      setError("Please enter a research topic.");
+      return;
+    }
 
     setLoading(true);
     setError("");
@@ -141,7 +120,7 @@ export default function Home() {
 
     try {
       const response = await fetch(
-  `${process.env.NEXT_PUBLIC_API_URL}/research/stream`,
+        `${process.env.NEXT_PUBLIC_API_URL}/research/stream`,
         {
           method: "POST",
           headers: {
@@ -153,10 +132,12 @@ export default function Home() {
         }
       );
 
-      if (!response.ok || !response.body) {
-        throw new Error(
-          "Could not connect to the research server."
-        );
+      if (!response.ok) {
+        throw new Error(`Request failed with status ${response.status}`);
+      }
+
+      if (!response.body) {
+        throw new Error("No response stream received from the server.");
       }
 
       const reader = response.body.getReader();
@@ -169,60 +150,67 @@ export default function Home() {
 
         if (done) break;
 
-        buffer += decoder.decode(value, {
-          stream: true,
-        });
+        buffer += decoder.decode(value, { stream: true });
 
         const events = buffer.split("\n\n");
-
         buffer = events.pop() || "";
 
         for (const event of events) {
-          if (!event.startsWith("data: ")) continue;
+          const line = event
+            .split("\n")
+            .find((line) => line.startsWith("data: "));
 
-          const data = JSON.parse(event.slice(6));
+          if (!line) continue;
 
-          if (data.type === "status") {
-            updateAgentStatus(
-              data.stage,
-              data.status
-            );
-          }
+          try {
+            const data = JSON.parse(line.replace("data: ", ""));
 
-          if (data.type === "result") {
-            const finalReport = data.data.report || "";
-            const feedback = data.data.feedback || "";
-
-            setReport(finalReport);
-
-            const {
-              data: { user },
-            } = await supabase.auth.getUser();
-
-            if (!user) {
-              throw new Error(
-                "You must be logged in to save research."
-              );
+            if (data.type === "status") {
+              updateStatus(data.stage, data.status);
             }
 
-            const { error: saveError } = await supabase
-              .from("researches")
-              .insert({
-                user_id: user.id,
-                topic: topic.trim(),
-                report: finalReport,
-                feedback: feedback,
-              });
+            if (data.type === "result") {
+              const finalReport = data.data.report || "";
+              const feedback = data.data.feedback || "";
 
-            if (saveError) {
-              throw new Error(
-                `Research completed, but could not be saved: ${saveError.message}`
-              );
+              setReport(finalReport);
+
+              const {
+                data: { user },
+              } = await supabase.auth.getUser();
+
+              if (!user) {
+                throw new Error(
+                  "You must be logged in to save research."
+                );
+              }
+
+              const { error: saveError } = await supabase
+                .from("researches")
+                .insert({
+                  user_id: user.id,
+                  topic: topic.trim(),
+                  report: finalReport,
+                  feedback: feedback,
+                });
+
+              if (saveError) {
+                throw new Error(
+                  `Research completed, but could not be saved: ${saveError.message}`
+                );
+              }
             }
-          }
 
-          if (data.type === "error") {
-            throw new Error(data.message);
+            if (data.type === "error") {
+              throw new Error(data.message || "Research failed.");
+            }
+          } catch (eventError) {
+            if (
+              eventError instanceof Error &&
+              eventError.message !== "Unexpected end of JSON input"
+            ) {
+              throw eventError;
+            }
           }
         }
       }
@@ -239,328 +227,252 @@ export default function Home() {
     }
   };
 
+  const statusLabel = (status: AgentStatus) => {
+    if (status === "running") return "Working...";
+    if (status === "completed") return "Completed";
+    return "Waiting";
+  };
+
+  const statusDot = (status: AgentStatus) => {
+    if (status === "completed") {
+      return "bg-green-400";
+    }
+
+    if (status === "running") {
+      return "bg-blue-400 animate-pulse";
+    }
+
+    return "bg-zinc-600";
+  };
+
+  const agents = [
+    {
+      key: "search" as const,
+      name: "Search Agent",
+      description: "Finds recent and reliable sources",
+      icon: "🔎",
+    },
+    {
+      key: "reader" as const,
+      name: "Reader Agent",
+      description: "Reads and extracts useful information",
+      icon: "📖",
+    },
+    {
+      key: "writer" as const,
+      name: "Writer Agent",
+      description: "Creates the research report",
+      icon: "✍️",
+    },
+    {
+      key: "critic" as const,
+      name: "Critic Agent",
+      description: "Reviews the generated report",
+      icon: "🧠",
+    },
+  ];
+
   return (
     <main className="min-h-screen bg-[#09090b] text-white">
-
       {/* Navbar */}
-      <nav className="border-b border-white/10">
+      <nav className="border-b border-zinc-800/80">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-5">
-
           <Link
             href="/"
-            className="flex items-center gap-3"
+            className="text-xl font-semibold tracking-tight"
           >
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white font-bold text-black">
-              R
-            </div>
-
-            <span className="text-lg font-semibold tracking-tight">
-              ResearchMind
-            </span>
+            ResearchMind
           </Link>
 
-          <div className="flex items-center gap-8 text-sm text-zinc-400">
-
-            <Link
-              href="/history"
-              className="transition hover:text-white"
-            >
-              History
-            </Link>
-
+          <div className="flex items-center gap-7">
             {userName ? (
-              <div className="flex items-center gap-3">
+              <>
+                <Link
+                  href="/history"
+                  className="text-sm text-zinc-300 transition hover:text-white"
+                >
+                  History
+                </Link>
 
-                <span className="max-w-[180px] truncate text-sm text-zinc-300">
+                <span className="text-sm text-zinc-300">
                   {userName}
                 </span>
 
                 <button
-                  onClick={signOut}
-                  className="rounded-xl border border-white/10 px-4 py-2 text-sm text-zinc-300 transition hover:bg-white/5 hover:text-white"
+                  onClick={() => setShowLogoutModal(true)}
+                  className="rounded-xl border border-zinc-700 bg-zinc-900 px-4 py-2 text-sm font-medium transition hover:border-zinc-500 hover:bg-zinc-800"
                 >
                   Logout
                 </button>
-
-              </div>
+              </>
             ) : (
               <button
                 onClick={signInWithGoogle}
-                className="rounded-xl border border-white/10 px-4 py-2 text-sm text-zinc-300 transition hover:bg-white/5 hover:text-white"
+                className="rounded-xl bg-white px-4 py-2 text-sm font-medium text-black transition hover:bg-zinc-200"
               >
                 Continue with Google
               </button>
             )}
-
           </div>
         </div>
       </nav>
 
       {/* Hero */}
-      <section className="mx-auto max-w-5xl px-6 pb-16 pt-24 text-center">
-
-        <div className="mb-6 inline-flex rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-zinc-400">
-          AI-Powered Research System
+      <section className="mx-auto max-w-5xl px-6 pb-12 pt-20 text-center">
+        <div className="mb-5 inline-flex rounded-full border border-zinc-800 bg-zinc-900/70 px-4 py-2 text-sm text-zinc-400">
+          AI-powered research assistant
         </div>
 
-        <h1 className="text-5xl font-semibold tracking-tight md:text-6xl">
+        <h1 className="text-5xl font-bold tracking-tight sm:text-6xl">
           Research deeper.
           <br />
-          <span className="text-zinc-500">
-            Understand faster.
-          </span>
+          <span className="text-zinc-400">Understand faster.</span>
         </h1>
 
         <p className="mx-auto mt-6 max-w-2xl text-base leading-7 text-zinc-400">
-          Give ResearchMind a topic and let multiple AI agents
-          search, analyze, write and critique a detailed research
-          report.
+          ResearchMind searches the web, reads relevant sources,
+          writes a structured report, and reviews the result for you.
         </p>
+      </section>
 
-        {/* Research Input */}
-        <div className="mx-auto mt-12 max-w-3xl">
+      {/* Research Input */}
+      <section className="mx-auto max-w-4xl px-6">
+        <div className="rounded-2xl border border-zinc-800 bg-zinc-950 p-5 shadow-2xl shadow-black/20">
+          <textarea
+            value={topic}
+            onChange={(e) => setTopic(e.target.value)}
+            placeholder="What do you want to research?"
+            rows={5}
+            disabled={loading}
+            className="w-full resize-none bg-transparent text-base text-white outline-none placeholder:text-zinc-600"
+          />
 
-          <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-3 shadow-2xl">
+          <div className="mt-4 flex items-center justify-between border-t border-zinc-800 pt-4">
+            <p className="text-xs text-zinc-600">
+              ResearchMind will use multiple AI agents.
+            </p>
 
-            <textarea
-              value={topic}
-              onChange={(e) => setTopic(e.target.value)}
-              placeholder="What would you like to research?"
-              rows={4}
+            <button
+              onClick={runResearch}
               disabled={loading}
-              className="w-full resize-none bg-transparent px-4 py-3 text-base text-white outline-none placeholder:text-zinc-600"
-            />
-
-            <div className="flex items-center justify-between border-t border-white/10 pt-3">
-
-              <span className="px-4 text-xs text-zinc-600">
-                {loading
-                  ? "Research agents are working..."
-                  : "Powered by a multi-agent research pipeline"}
-              </span>
-
-              <button
-                onClick={runResearch}
-                disabled={!topic.trim() || loading}
-                className="rounded-xl bg-white px-5 py-2.5 text-sm font-medium text-black transition hover:bg-zinc-200 disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                {loading
-                  ? "Researching..."
-                  : "Run Research →"}
-              </button>
-
-            </div>
+              className="rounded-xl bg-white px-5 py-2.5 text-sm font-semibold text-black transition hover:bg-zinc-200 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {loading ? "Researching..." : "Run Research"}
+            </button>
           </div>
         </div>
+      </section>
 
-        {/* Error */}
-        {error && (
-          <div className="mx-auto mt-6 max-w-3xl rounded-xl border border-red-500/20 bg-red-500/5 p-4 text-sm text-red-400">
+      {/* Agent Status */}
+      <section className="mx-auto max-w-4xl px-6 py-10">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {agents.map((agent) => {
+            const status = statuses[agent.key];
+
+            return (
+              <div
+                key={agent.key}
+                className="rounded-2xl border border-zinc-800 bg-zinc-950 p-5"
+              >
+                <div className="flex items-start justify-between">
+                  <span className="text-xl">{agent.icon}</span>
+
+                  <span
+                    className={`h-2.5 w-2.5 rounded-full ${statusDot(
+                      status
+                    )}`}
+                  />
+                </div>
+
+                <h3 className="mt-4 font-medium">
+                  {agent.name}
+                </h3>
+
+                <p className="mt-1 text-xs leading-5 text-zinc-500">
+                  {agent.description}
+                </p>
+
+                <p className="mt-4 text-xs text-zinc-400">
+                  {statusLabel(status)}
+                </p>
+              </div>
+            );
+          })}
+        </div>
+      </section>
+
+      {/* Error */}
+      {error && (
+        <section className="mx-auto max-w-4xl px-6 pb-8">
+          <div className="rounded-xl border border-red-900/50 bg-red-950/20 px-5 py-4 text-sm text-red-300">
             {error}
           </div>
-        )}
-
-      </section>
-
-      {/* Pipeline */}
-      <section className="mx-auto max-w-5xl px-6 pb-16">
-
-        <div className="mb-6">
-
-          <h2 className="text-lg font-semibold">
-            Research Pipeline
-          </h2>
-
-          <p className="mt-1 text-sm text-zinc-500">
-            Your research passes through multiple specialized agents.
-          </p>
-
-        </div>
-
-        <div className="grid gap-4 md:grid-cols-4">
-
-          {agents.map((agent) => (
-            <AgentCard
-              key={agent.key}
-              agent={agent}
-              status={statuses[agent.key]}
-            />
-          ))}
-
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* Report */}
       {report && (
-        <section className="mx-auto max-w-5xl px-6 pb-24">
-
-          <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-8">
-
-            <div className="mb-8">
-
+        <section className="mx-auto max-w-4xl px-6 pb-20">
+          <div className="rounded-2xl border border-zinc-800 bg-zinc-950 p-7">
+            <div className="mb-7 border-b border-zinc-800 pb-5">
               <p className="text-xs uppercase tracking-widest text-zinc-500">
-                Research Complete
+                Research Report
               </p>
 
               <h2 className="mt-2 text-2xl font-semibold">
-                Research Report
+                {topic}
               </h2>
-
             </div>
 
-            <article className="text-sm leading-7 text-zinc-300">
-
-              <ReactMarkdown
-                components={{
-                  h1: ({ children }) => (
-                    <h1 className="mb-6 mt-8 text-3xl font-semibold text-white">
-                      {children}
-                    </h1>
-                  ),
-
-                  h2: ({ children }) => (
-                    <h2 className="mb-4 mt-8 text-2xl font-semibold text-white">
-                      {children}
-                    </h2>
-                  ),
-
-                  h3: ({ children }) => (
-                    <h3 className="mb-3 mt-6 text-xl font-semibold text-white">
-                      {children}
-                    </h3>
-                  ),
-
-                  p: ({ children }) => (
-                    <p className="mb-5 leading-7 text-zinc-300">
-                      {children}
-                    </p>
-                  ),
-
-                  ul: ({ children }) => (
-                    <ul className="mb-5 ml-6 list-disc space-y-2 text-zinc-300">
-                      {children}
-                    </ul>
-                  ),
-
-                  ol: ({ children }) => (
-                    <ol className="mb-5 ml-6 list-decimal space-y-2 text-zinc-300">
-                      {children}
-                    </ol>
-                  ),
-
-                  li: ({ children }) => (
-                    <li className="pl-1">
-                      {children}
-                    </li>
-                  ),
-
-                  strong: ({ children }) => (
-                    <strong className="font-semibold text-white">
-                      {children}
-                    </strong>
-                  ),
-
-                  a: ({ href, children }) => (
-                    <a
-                      href={href}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-zinc-100 underline underline-offset-4 hover:text-white"
-                    >
-                      {children}
-                    </a>
-                  ),
-
-                  blockquote: ({ children }) => (
-                    <blockquote className="mb-5 border-l-2 border-white/20 pl-4 italic text-zinc-400">
-                      {children}
-                    </blockquote>
-                  ),
-
-                  code: ({ children }) => (
-                    <code className="rounded bg-white/10 px-1.5 py-0.5 text-xs text-zinc-200">
-                      {children}
-                    </code>
-                  ),
-                }}
-              >
-                {report}
-              </ReactMarkdown>
-
+            <article className="prose prose-invert max-w-none prose-headings:font-semibold prose-p:text-zinc-300 prose-p:leading-7 prose-li:text-zinc-300 prose-strong:text-white">
+              <ReactMarkdown>{report}</ReactMarkdown>
             </article>
           </div>
         </section>
       )}
 
-    </main>
-  );
-}
+      {/* Logout Confirmation Modal */}
+      {showLogoutModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-6 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-2xl border border-zinc-800 bg-[#111113] p-6 shadow-2xl">
+            <div className="flex items-start justify-between">
+              <div>
+                <h2 className="text-xl font-semibold text-white">
+                  Log out?
+                </h2>
 
-function AgentCard({
-  agent,
-  status,
-}: {
-  agent: Agent;
-  status: AgentStatus;
-}) {
-  const statusText = {
-    waiting: "Waiting",
-    running: "Running",
-    completed: "Done",
-  };
+                <p className="mt-2 text-sm leading-6 text-zinc-400">
+                  Are you sure you want to log out of ResearchMind?
+                </p>
+              </div>
 
-  return (
-    <div
-      className={`rounded-2xl border p-5 transition-all ${
-        status === "running"
-          ? "border-white/30 bg-white/[0.06]"
-          : status === "completed"
-            ? "border-emerald-500/30 bg-emerald-500/[0.03]"
-            : "border-white/10 bg-white/[0.02]"
-      }`}
-    >
+              <button
+                onClick={() => setShowLogoutModal(false)}
+                className="rounded-lg p-1.5 text-zinc-500 transition hover:bg-zinc-800 hover:text-white"
+                aria-label="Close"
+              >
+                ✕
+              </button>
+            </div>
 
-      <div className="mb-8 flex items-center justify-between">
+            <div className="mt-7 flex justify-end gap-3">
+              <button
+                onClick={() => setShowLogoutModal(false)}
+                className="rounded-xl border border-zinc-700 px-4 py-2.5 text-sm font-medium text-zinc-300 transition hover:bg-zinc-800 hover:text-white"
+              >
+                Cancel
+              </button>
 
-        <span className="text-xs text-zinc-600">
-          {agent.number}
-        </span>
-
-        <div className="flex items-center gap-2">
-
-          <span
-            className={`text-[10px] uppercase tracking-wider ${
-              status === "running"
-                ? "text-white"
-                : status === "completed"
-                  ? "text-emerald-400"
-                  : "text-zinc-600"
-            }`}
-          >
-            {statusText[status]}
-          </span>
-
-          <div
-            className={`h-2 w-2 rounded-full ${
-              status === "running"
-                ? "animate-pulse bg-white"
-                : status === "completed"
-                  ? "bg-emerald-400"
-                  : "bg-zinc-700"
-            }`}
-          />
-
+              <button
+                onClick={signOut}
+                className="rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-black transition hover:bg-zinc-200"
+              >
+                Logout
+              </button>
+            </div>
+          </div>
         </div>
-      </div>
-
-      <h3 className="font-medium">
-        {agent.title}
-      </h3>
-
-      <p className="mt-2 text-sm leading-6 text-zinc-500">
-        {agent.description}
-      </p>
-
-    </div>
+      )}
+    </main>
   );
 }
