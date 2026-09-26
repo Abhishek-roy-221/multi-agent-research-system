@@ -1,4 +1,19 @@
+# Python
 .venv/
 __pycache__/
 *.pyc
+
+# Environment variables / secrets
 .env
+.env.*
+!.env.example
+
+# Node.js
+node_modules/
+
+# Next.js
+.next/
+out/
+
+# Build / cache
+*.log

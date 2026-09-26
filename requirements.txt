@@ -1,11 +1,10 @@
+fastapi
+uvicorn
+pydantic
 langchain
-langchain-core
-langchain-openai
+langchain-google-genai
 langchain-community
 tavily-python
 beautifulsoup4
 requests
 python-dotenv
-streamlit
-langchain-google-genai
-dotenv
