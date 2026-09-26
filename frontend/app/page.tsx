@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import ReactMarkdown from "react-markdown";
 import { createClient } from "@/lib/supabase/client";
@@ -15,8 +15,9 @@ export default function Home() {
   const [report, setReport] = useState("");
   const [error, setError] = useState("");
   const [userName, setUserName] = useState<string | null>(null);
-
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+
+  const reportRef = useRef<HTMLElement | null>(null);
 
   const [statuses, setStatuses] = useState<{
     search: AgentStatus;
@@ -61,6 +62,18 @@ export default function Home() {
       subscription.unsubscribe();
     };
   }, [supabase]);
+
+  // Automatically move to the generated report
+  useEffect(() => {
+    if (report && !loading) {
+      setTimeout(() => {
+        reportRef.current?.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        });
+      }, 150);
+    }
+  }, [report, loading]);
 
   const signInWithGoogle = async () => {
     setError("");
@@ -207,7 +220,8 @@ export default function Home() {
           } catch (eventError) {
             if (
               eventError instanceof Error &&
-              eventError.message !== "Unexpected end of JSON input"
+              eventError.message !==
+                "Unexpected end of JSON input"
             ) {
               throw eventError;
             }
@@ -326,7 +340,9 @@ export default function Home() {
         <h1 className="text-5xl font-bold tracking-tight sm:text-6xl">
           Research deeper.
           <br />
-          <span className="text-zinc-400">Understand faster.</span>
+          <span className="text-zinc-400">
+            Understand faster.
+          </span>
         </h1>
 
         <p className="mx-auto mt-6 max-w-2xl text-base leading-7 text-zinc-400">
@@ -412,20 +428,106 @@ export default function Home() {
 
       {/* Report */}
       {report && (
-        <section className="mx-auto max-w-4xl px-6 pb-20">
+        <section
+          ref={reportRef}
+          className="mx-auto max-w-4xl scroll-mt-6 px-6 pb-20"
+        >
           <div className="rounded-2xl border border-zinc-800 bg-zinc-950 p-7">
-            <div className="mb-7 border-b border-zinc-800 pb-5">
-              <p className="text-xs uppercase tracking-widest text-zinc-500">
+            <div className="mb-8 border-b border-zinc-800 pb-6">
+              <p className="text-xs uppercase tracking-[0.18em] text-zinc-500">
                 Research Report
               </p>
 
-              <h2 className="mt-2 text-2xl font-semibold">
+              <h2 className="mt-3 text-2xl font-semibold leading-tight text-white">
                 {topic}
               </h2>
             </div>
 
-            <article className="prose prose-invert max-w-none prose-headings:font-semibold prose-p:text-zinc-300 prose-p:leading-7 prose-li:text-zinc-300 prose-strong:text-white">
-              <ReactMarkdown>{report}</ReactMarkdown>
+            <article className="max-w-none">
+              <ReactMarkdown
+                components={{
+                  h1: ({ children }) => (
+                    <h1 className="mb-6 mt-2 text-3xl font-bold leading-tight text-white">
+                      {children}
+                    </h1>
+                  ),
+
+                  h2: ({ children }) => (
+                    <h2 className="mb-4 mt-10 text-2xl font-semibold leading-tight text-white">
+                      {children}
+                    </h2>
+                  ),
+
+                  h3: ({ children }) => (
+                    <h3 className="mb-3 mt-8 text-xl font-semibold leading-tight text-zinc-100">
+                      {children}
+                    </h3>
+                  ),
+
+                  p: ({ children }) => (
+                    <p className="mb-5 text-[15px] leading-8 text-zinc-300">
+                      {children}
+                    </p>
+                  ),
+
+                  strong: ({ children }) => (
+                    <strong className="font-semibold text-white">
+                      {children}
+                    </strong>
+                  ),
+
+                  em: ({ children }) => (
+                    <em className="text-zinc-200">
+                      {children}
+                    </em>
+                  ),
+
+                  ul: ({ children }) => (
+                    <ul className="mb-6 ml-6 list-disc space-y-2 text-[15px] leading-7 text-zinc-300">
+                      {children}
+                    </ul>
+                  ),
+
+                  ol: ({ children }) => (
+                    <ol className="mb-6 ml-6 list-decimal space-y-2 text-[15px] leading-7 text-zinc-300">
+                      {children}
+                    </ol>
+                  ),
+
+                  li: ({ children }) => (
+                    <li className="pl-1">{children}</li>
+                  ),
+
+                  blockquote: ({ children }) => (
+                    <blockquote className="my-6 border-l-2 border-zinc-600 pl-5 text-zinc-400">
+                      {children}
+                    </blockquote>
+                  ),
+
+                  code: ({ children }) => (
+                    <code className="rounded-md bg-zinc-900 px-1.5 py-0.5 text-sm text-zinc-200">
+                      {children}
+                    </code>
+                  ),
+
+                  hr: () => (
+                    <hr className="my-8 border-zinc-800" />
+                  ),
+
+                  a: ({ href, children }) => (
+                    <a
+                      href={href}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-zinc-100 underline underline-offset-4 hover:text-white"
+                    >
+                      {children}
+                    </a>
+                  ),
+                }}
+              >
+                {report}
+              </ReactMarkdown>
             </article>
           </div>
         </section>
