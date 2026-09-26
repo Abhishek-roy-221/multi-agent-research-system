@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import ReactMarkdown from "react-markdown";
 import { createClient } from "@/lib/supabase/client";
 
@@ -47,7 +48,7 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [report, setReport] = useState("");
   const [error, setError] = useState("");
-  const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [userName, setUserName] = useState<string | null>(null);
 
   const [statuses, setStatuses] = useState<Record<string, AgentStatus>>({
     search: "waiting",
@@ -62,7 +63,11 @@ export default function Home() {
         data: { user },
       } = await supabase.auth.getUser();
 
-      setUserEmail(user?.email ?? null);
+      setUserName(
+        user?.user_metadata?.full_name ||
+          user?.user_metadata?.name ||
+          "User"
+      );
     };
 
     getUser();
@@ -70,7 +75,13 @@ export default function Home() {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUserEmail(session?.user?.email ?? null);
+      const user = session?.user;
+
+      setUserName(
+        user?.user_metadata?.full_name ||
+          user?.user_metadata?.name ||
+          "User"
+      );
     });
 
     return () => {
@@ -101,7 +112,7 @@ export default function Home() {
       return;
     }
 
-    setUserEmail(null);
+    setUserName(null);
   };
 
   const updateAgentStatus = (
@@ -130,7 +141,7 @@ export default function Home() {
 
     try {
       const response = await fetch(
-        "http://127.0.0.1:8000/research/stream",
+  `${process.env.NEXT_PUBLIC_API_URL}/research/stream`,
         {
           method: "POST",
           headers: {
@@ -179,34 +190,36 @@ export default function Home() {
           }
 
           if (data.type === "result") {
-  const finalReport = data.data.report || "";
-  const feedback = data.data.feedback || "";
+            const finalReport = data.data.report || "";
+            const feedback = data.data.feedback || "";
 
-  setReport(finalReport);
+            setReport(finalReport);
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+            const {
+              data: { user },
+            } = await supabase.auth.getUser();
 
-  if (!user) {
-    throw new Error("You must be logged in to save research.");
-  }
+            if (!user) {
+              throw new Error(
+                "You must be logged in to save research."
+              );
+            }
 
-  const { error: saveError } = await supabase
-    .from("researches")
-    .insert({
-      user_id: user.id,
-      topic: topic.trim(),
-      report: finalReport,
-      feedback: feedback,
-    });
+            const { error: saveError } = await supabase
+              .from("researches")
+              .insert({
+                user_id: user.id,
+                topic: topic.trim(),
+                report: finalReport,
+                feedback: feedback,
+              });
 
-  if (saveError) {
-    throw new Error(
-      `Research completed, but could not be saved: ${saveError.message}`
-    );
-  }
-}
+            if (saveError) {
+              throw new Error(
+                `Research completed, but could not be saved: ${saveError.message}`
+              );
+            }
+          }
 
           if (data.type === "error") {
             throw new Error(data.message);
@@ -233,7 +246,10 @@ export default function Home() {
       <nav className="border-b border-white/10">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-5">
 
-          <div className="flex items-center gap-3">
+          <Link
+            href="/"
+            className="flex items-center gap-3"
+          >
             <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white font-bold text-black">
               R
             </div>
@@ -241,27 +257,22 @@ export default function Home() {
             <span className="text-lg font-semibold tracking-tight">
               ResearchMind
             </span>
-          </div>
+          </Link>
 
           <div className="flex items-center gap-8 text-sm text-zinc-400">
 
-            <button
-              className="transition hover:text-white"
-            >
-              New Research
-            </button>
-
-            <button
+            <Link
+              href="/history"
               className="transition hover:text-white"
             >
               History
-            </button>
+            </Link>
 
-            {userEmail ? (
+            {userName ? (
               <div className="flex items-center gap-3">
 
-                <span className="max-w-[220px] truncate text-sm text-zinc-400">
-                  {userEmail}
+                <span className="max-w-[180px] truncate text-sm text-zinc-300">
+                  {userName}
                 </span>
 
                 <button
