@@ -3,6 +3,7 @@ uvicorn
 pydantic
 langchain
 langchain-google-genai
+langchain-mistralai
 langchain-community
 tavily-python
 beautifulsoup4
